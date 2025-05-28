@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Shroomtop420® SVG Lab</title>
+  <style>
+    :root {
+      --bg: #0d0d0d;
+      --fg: #e4e4e4;
+      --accent: #44ff88;
+    }
+    * { box-sizing: border-box; font-family: "Fira Code", Consolas, monospace; }
+    body { margin: 0; display: flex; flex-direction: column; min-height: 100vh;
+      background: var(--bg); color: var(--fg);
+    }
+    header { padding: 1rem; text-align: center; border-bottom: 1px solid #222; }
+    main { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; padding: 1rem; }
+    textarea {
+      width: 100%; height: 100%; background: #111; color: #cfcfcf;
+      border: 1px solid #333; padding: .75rem; border-radius: 6px; resize: vertical;
+    }
+    #previewWrapper {
+      background: #111; border: 1px solid #333; border-radius: 6px;
+      padding: .5rem; display: flex; flex-direction: column;
+    }
+    #previewContainer {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      min-height: 200px; overflow: auto;
+    }
+    #previewContainer svg { max-width: 100%; height: auto; }
+    fieldset {
+      border: 1px solid #333; border-radius: 6px;
+      padding: .5rem; margin: .5rem 0;
+    }
+    label { display: block; margin: .25rem 0; font-size: .9rem; }
+    input[type="number"], select {
+      width: 100%; padding: .25rem; background: #1a1a1a;
+      color: var(--fg); border: 1px solid #444; border-radius: 4px;
+    }
+    button {
+      cursor: pointer; background: var(--accent); border: none;
+      padding: .5rem 1.2rem; border-radius: 4px; margin-top: .5rem;
+      font-weight: 700; color: #000;
+    }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Shroomtop420® SVG Lab</h1>
+    <p>Paste any SVG → Preview → Export as SVG/PNG/WebP at custom size</p>
+  </header>
+  <main>
+    <section>
+      <textarea id="svgInput" placeholder="Paste your SVG code here…"></textarea>
+      <button id="renderBtn">Render ⟳</button>
+    </section>
+    <section id="previewWrapper">
+      <div id="previewContainer">
+        <span style="opacity:.5">Preview will appear here</span>
+      </div>
+      <fieldset>
+        <legend>Export Settings</legend>
+        <label>
+          Width (px)
+          <input type="number" id="expWidth" value="1600" min="1"/>
+        </label>
+        <label>
+          Height (px)
+          <input type="number" id="expHeight" value="600" min="1"/>
+        </label>
+        <label>
+          Format
+          <select id="expFormat">
+            <option value="svg">SVG</option>
+            <option value="png">PNG</option>
+            <option value="webp">WebP</option>
+          </select>
+        </label>
+        <button id="downloadBtn" disabled>Download ▼</button>
+      </fieldset>
+    </section>
+  </main>
+  <script type="module">
+    const inp = document.getElementById('svgInput');
+    const btnR = document.getElementById('renderBtn');
+    const prev = document.getElementById('previewContainer');
+    const btnD = document.getElementById('downloadBtn');
+    const wI = document.getElementById('expWidth');
+    const hI = document.getElementById('expHeight');
+    const fI = document.getElementById('expFormat');
+    let svgText = '';
+
+    btnR.addEventListener('click', () => {
+      const t = inp.value.trim();
+      if (!t) return alert('Paste some SVG first');
+      svgText = t;
+      prev.innerHTML = t;
+      btnD.disabled = false;
+    });
+
+    function downloadBlob(blob, name){
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => URL.revokeObjectURL(url) || a.remove(), 0);
+    }
+
+    async function makeRaster(mime){
+      const url = URL.createObjectURL(new Blob([svgText], { type: 'image/svg+xml' }));
+      const img = new Image();
+      img.src = url;
+      await img.decode();
+      const cnv = document.createElement('canvas');
+      cnv.width = +wI.value; cnv.height = +hI.value;
+      cnv.getContext('2d').drawImage(img, 0, 0, cnv.width, cnv.height);
+      URL.revokeObjectURL(url);
+      return new Promise(res => cnv.toBlob(res, mime));
+    }
+
+    btnD.addEventListener('click', async () => {
+      if (!svgText) return;
+      if (fI.value === 'svg') {
+        downloadBlob(new Blob([svgText], { type: 'image/svg+xml' }), 'shroomtop420.svg');
+      } else {
+        const mime = fI.value === 'png' ? 'image/png' : 'image/webp';
+        const b = await makeRaster(mime);
+        downloadBlob(b, `shroomtop420.${fI.value}`);
+      }
+    });
+  </script>
+</body>
+</html>
